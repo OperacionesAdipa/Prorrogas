@@ -6,117 +6,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f7f7f7;
-      padding: 20px;
-    }
-    .container {
-      max-width: 620px;
-      margin: auto;
-      background: #ffffff;
-      padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    img.logo {
-      width: 160px;
-      display: block;
-      margin: 0 auto 25px;
-    }
-    h1 {
-      font-size: 22px;
-      margin-bottom: 25px;
-      text-align: center;
-      color: #333;
-    }
-    label {
-      font-weight: bold;
-      margin-top: 18px;
-      display: block;
-      color: #444;
-    }
-    input, select, button {
-      width: 100%;
-      padding: 10px;
-      margin-top: 8px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      font-size: 14px;
-      box-sizing: border-box;
-      height: 45px;
-    }
-    input:focus, select:focus {
-      outline: none;
-      border-color: #704EFD;
-      box-shadow: 0 0 5px rgba(112, 78, 253, 0.2);
-    }
-    #nombreEdicion, #rutEdicion {
-      border: 1.5px solid #704EFD;
-      background-color: #f0edff;
-      font-weight: 500;
-    }
-    .checkbox-container {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      margin-top: 25px;
-      background: #f9f9f9;
-      padding: 15px;
-      border-radius: 6px;
-    }
-    .checkbox-container input {
-      width: 18px;
-      height: 18px;
-      margin-top: 2px;
-      cursor: pointer;
-    }
-    .checkbox-container label {
-      font-weight: normal;
-      font-size: 13px;
-      margin-top: 0;
-      line-height: 1.4;
-      cursor: pointer;
-    }
-    button {
-      background-color: #704EFD;
-      color: white;
-      border: none;
-      cursor: pointer;
-      margin-top: 20px;
-      font-weight: bold;
-      transition: background 0.3s;
-    }
-    button:hover:not(:disabled) {
-      background-color: #5a3ecf;
-    }
-    button:disabled {
-      background-color: #ccc;
-      cursor: not-allowed;
-    }
-    .mensaje {
-      margin-top: 20px;
-      font-size: 14px;
-      text-align: center;
-      font-weight: 500;
-    }
-    .btn-whatsapp {
-      position: fixed;
-      bottom: 25px;
-      right: 25px;
-      width: 60px;
-      height: 60px;
-      background-color: #25d366;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      z-index: 9999;
-      transition: transform 0.3s ease;
-    }
-    .btn-whatsapp:hover { transform: scale(1.1); }
-    .btn-whatsapp img { width: 35px; height: 35px; }
+    body { font-family: Arial, sans-serif; background: #f7f7f7; padding: 20px; }
+    .container { max-width: 620px; margin: auto; background: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    img.logo { width: 160px; display: block; margin: 0 auto 25px; }
+    h1 { font-size: 22px; margin-bottom: 25px; text-align: center; color: #333; }
+    label { font-weight: bold; margin-top: 18px; display: block; color: #444; }
+    input, select, button { width: 100%; padding: 10px; margin-top: 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; box-sizing: border-box; height: 45px; }
+    input:focus, select:focus { outline: none; border-color: #704EFD; box-shadow: 0 0 5px rgba(112, 78, 253, 0.2); }
+    button { background-color: #704EFD; color: white; border: none; cursor: pointer; margin-top: 20px; font-weight: bold; transition: background 0.3s; }
+    button:hover:not(:disabled) { background-color: #5a3ecf; }
+    button:disabled { background-color: #ccc; cursor: not-allowed; }
+    .mensaje { margin-top: 20px; font-size: 14px; text-align: center; font-weight: 500; }
+    .info-nota { font-size: 12px; color: #666; font-style: italic; margin-top: 5px; }
+    .hidden { display: none; }
   </style>
 </head>
 
@@ -131,31 +33,70 @@
     <input type="email" id="email" placeholder="Ingresa el correo registrado en Adipa" required>
 
     <label for="tipoProrroga">Tipo de Prórroga</label>
-    <select id="tipoProrroga" required>
+    <select id="tipoProrroga" onchange="limpiarPantalla()">
       <option value="">-- Selecciona una opción --</option>
       <option value="prorroga_evaluacion">Prórroga evaluaciones</option>
       <option value="prorroga_material">Prórroga descarga de material</option>
     </select>
 
+    <div id="extraEvaluacion" class="hidden">
+        <label for="tipoPrograma">Tipo de Programa</label>
+        <select id="tipoPrograma" onchange="toggleModulo()">
+            <option value="curso">Curso</option>
+            <option value="diplomado">Diplomado</option>
+        </select>
+    </div>
+
     <button id="btnBuscar" onclick="buscarProgramas()">Buscar programas</button>
 
-    <div id="contenedorCursos" style="display:none; margin-top: 30px; border-top: 2px solid #eee; padding-top: 10px;">
+    <div id="contenedorCursos" class="hidden" style="margin-top: 30px; border-top: 2px solid #eee; padding-top: 10px;">
       
-
-      <label for="curso" style="margin-top: 15px;">Selecciona el Programa</label>
+      <label for="curso">Selecciona el Programa</label>
       <select id="curso"></select>
 
+      <div id="divModulo" class="hidden">
+          <label for="modulo">Módulo del Programa</label>
+          <input type="text" id="modulo" placeholder="Ej: Módulo 2 o Nombre del módulo">
+      </div>
 
-      <button id="btnEnviarFinal" onclick="enviarSolicitudFinal()" disabled>Gestionar</button>
+      <div id="divDias">
+          <label for="dias">Días de prórroga</label>
+          <select id="dias"></select>
+          <p id="notaDias" class="info-nota"></p>
+      </div>
+
+      <button id="btnEnviarFinal" onclick="enviarSolicitudFinal()">Gestionar Prórroga</button>
     </div>
 
     <div class="mensaje" id="mensaje"></div>
   </div>
 
-
   <script>
     const WEBHOOK_BUSCAR = "https://hook.us2.make.com/k6n5v5l2brwcfe3ab14t3s4rwojl1akg";
     const WEBHOOK_ENVIAR = "https://hook.us2.make.com/tkiwujry2rm5llcu4jbu7u7qgy8u23qv"; 
+
+    function limpiarPantalla() {
+        const tipo = document.getElementById("tipoProrroga").value;
+        document.getElementById("contenedorCursos").classList.add("hidden");
+        document.getElementById("mensaje").textContent = "";
+        
+        // Mostrar/Ocultar opción de Curso/Diplomado
+        if (tipo === "prorroga_evaluacion") {
+            document.getElementById("extraEvaluacion").classList.remove("hidden");
+        } else {
+            document.getElementById("extraEvaluacion").classList.add("hidden");
+        }
+    }
+
+    function toggleModulo() {
+        const tipoProg = document.getElementById("tipoPrograma").value;
+        const divMod = document.getElementById("divModulo");
+        if (tipoProg === "diplomado") {
+            divMod.classList.remove("hidden");
+        } else {
+            divMod.classList.add("hidden");
+        }
+    }
 
     async function buscarProgramas() {
       const email = document.getElementById("email").value.trim();
@@ -181,18 +122,15 @@
         });
 
         const data = await response.json(); 
-
         let listaCursos = [];
         if (data.cursos) {
             listaCursos = Array.isArray(data.cursos) ? data.cursos : data.cursos.split(',').map(c => c.trim().replace(/[\[\]"']/g, ""));
         }
 
         if (listaCursos.length === 0) throw new Error();
-
         
         const selectCursos = document.getElementById("curso");
         selectCursos.innerHTML = "";
-        
         listaCursos.forEach(c => {
           if(c) {
             let opt = document.createElement("option");
@@ -202,37 +140,53 @@
           }
         });
 
-        document.getElementById("contenedorCursos").style.display = "block";
-        mensaje.textContent = "¡Programas encontrados! Selecciona uno para continuar.";
+        // Configurar los días según el tipo
+        const selectDias = document.getElementById("dias");
+        const nota = document.getElementById("notaDias");
+        selectDias.innerHTML = "";
+        
+        if (tipoProrroga === "prorroga_material") {
+            [1, 2].forEach(d => {
+                let opt = document.createElement("option");
+                opt.value = d; opt.textContent = d + (d === 1 ? " día" : " días");
+                selectDias.appendChild(opt);
+            });
+            nota.textContent = "Máximo 2 días para descarga de material.";
+        } else {
+            [3, 5, 7, 10, 15].forEach(d => {
+                let opt = document.createElement("option");
+                opt.value = d; opt.textContent = d + " días";
+                selectDias.appendChild(opt);
+            });
+            nota.textContent = "Plazos estándar para evaluaciones.";
+        }
+
+        document.getElementById("contenedorCursos").classList.remove("hidden");
+        mensaje.textContent = "¡Programas encontrados!";
         mensaje.style.color = "green";
 
       } catch (e) {
-        mensaje.textContent = "No se encontraron datos para este correo.";
+        mensaje.textContent = "No se encontraron programas activos para este correo.";
         mensaje.style.color = "red";
       } finally { boton.disabled = false; }
-    }
-
-    function validarCheckbox() {
-      const check = document.getElementById("terminos");
-      document.getElementById("btnEnviarFinal").disabled = !check.checked;
     }
 
     async function enviarSolicitudFinal() {
       const mensaje = document.getElementById("mensaje");
       const btnFinal = document.getElementById("btnEnviarFinal");
-      const nombreFinal = document.getElementById("nombreEdicion").value.trim();
-      const rutFinal = document.getElementById("rutEdicion").value.trim();
-
-
 
       const payload = {
         email: document.getElementById("email").value.trim(),
         tipo_prorroga: document.getElementById("tipoProrroga").value,
+        tipo_programa: document.getElementById("tipoPrograma").value || "n/a",
         programa: document.getElementById("curso").value,
-        fecha: new Date().toLocaleString()
+        modulo: document.getElementById("modulo").value || "Completo",
+        dias_adicionales: document.getElementById("dias").value,
+        fecha_solicitud: new Date().toLocaleString()
       };
 
-      mensaje.textContent = "Procesando solicitud...";
+      mensaje.textContent = "Procesando prórroga...";
+      mensaje.style.color = "#666";
       btnFinal.disabled = true;
 
       try {
@@ -243,12 +197,12 @@
         });
 
         if (res.ok) {
-          mensaje.innerHTML = "<strong>¡Prórroga gestionada!</strong> <br>";
+          mensaje.innerHTML = "<strong>¡Prórroga gestionada con éxito!</strong>";
           mensaje.style.color = "green";
-          document.getElementById("contenedorCursos").style.display = "none";
+          setTimeout(() => { location.reload(); }, 3000); // Recarga para limpiar
         } else { throw new Error(); }
       } catch (e) {
-        mensaje.textContent = "Error al enviar. Intenta de nuevo.";
+        mensaje.textContent = "Error al conectar con el servidor.";
         mensaje.style.color = "red";
         btnFinal.disabled = false;
       }
