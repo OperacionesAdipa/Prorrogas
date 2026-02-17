@@ -85,7 +85,7 @@
         } else {
             document.getElementById("extraEvaluacion").classList.add("hidden");
         }
-        toggleModulo(); // Asegura que el módulo se oculte si cambiamos a material
+        toggleModulo();
     }
 
     function toggleModulo() {
@@ -93,7 +93,7 @@
         const tipoProg = document.getElementById("tipoPrograma").value;
         const divMod = document.getElementById("divModulo");
         
-        // Solo mostrar módulo si es Evaluación Y Diplomado
+        // El módulo solo aparece si es Evaluación Y Diplomado
         if (tipoProrroga === "prorroga_evaluacion" && tipoProg === "diplomado") {
             divMod.classList.remove("hidden");
         } else {
@@ -104,6 +104,7 @@
     async function buscarProgramas() {
       const email = document.getElementById("email").value.trim();
       const tipoProrroga = document.getElementById("tipoProrroga").value;
+      const tipoPrograma = document.getElementById("tipoPrograma").value;
       const mensaje = document.getElementById("mensaje");
       const boton = document.getElementById("btnBuscar");
 
@@ -121,7 +122,11 @@
         const response = await fetch(WEBHOOK_BUSCAR, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: email, tipo_prorroga: tipoProrroga })
+          body: JSON.stringify({ 
+              email: email, 
+              tipo_prorroga: tipoProrroga,
+              tipo_programa: tipoProrroga === "prorroga_material" ? "curso" : tipoPrograma 
+          })
         });
 
         const data = await response.json(); 
@@ -164,7 +169,7 @@
         }
 
         document.getElementById("contenedorCursos").classList.remove("hidden");
-        toggleModulo(); // Re-validar visibilidad del módulo al mostrar el contenedor
+        toggleModulo();
         mensaje.textContent = "¡Programas encontrados!";
         mensaje.style.color = "green";
 
@@ -178,10 +183,18 @@
       const mensaje = document.getElementById("mensaje");
       const btnFinal = document.getElementById("btnEnviarFinal");
 
+      const tipoProrroga = document.getElementById("tipoProrroga").value;
+      let tipoPrograma = document.getElementById("tipoPrograma").value;
+
+      // Si es material, el tipo_programa se envía como "curso" por defecto
+      if (tipoProrroga === "prorroga_material") {
+          tipoPrograma = "curso";
+      }
+
       const payload = {
         email: document.getElementById("email").value.trim(),
-        tipo_prorroga: document.getElementById("tipoProrroga").value,
-        tipo_programa: document.getElementById("tipoPrograma").value || "n/a",
+        tipo_prorroga: tipoProrroga,
+        tipo_programa: tipoPrograma,
         programa: document.getElementById("curso").value,
         modulo: document.getElementById("modulo").value || "Completo",
         dias_adicionales: document.getElementById("dias").value,
