@@ -159,11 +159,11 @@
 
     async function buscarProgramas() {
       const email = document.getElementById("email").value.trim();
-      const tipoCertificado = document.getElementById("tipoCertificado").value;
+      const tipoProrroga = document.getElementById("tipoProrroga").value;
       const mensaje = document.getElementById("mensaje");
       const boton = document.getElementById("btnBuscar");
 
-      if (!email || !tipoCertificado) {
+      if (!email || !tipoProrroga) {
         mensaje.textContent = "Por favor, completa el correo y el tipo de prórroga.";
         mensaje.style.color = "red";
         return;
@@ -177,7 +177,7 @@
         const response = await fetch(WEBHOOK_BUSCAR, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: email, tipo_certificado: tipoCertificado })
+          body: JSON.stringify({ email: email, tipo_prorroga: tipoProrroga })
         });
 
         const data = await response.json(); 
@@ -189,9 +189,6 @@
 
         if (listaCursos.length === 0) throw new Error();
 
-        // Rellenar Nombre y RUT
-        document.getElementById("nombreEdicion").value = data.nombre_estudiante || "";
-        document.getElementById("rutEdicion").value = data.rut || "";
         
         const selectCursos = document.getElementById("curso");
         selectCursos.innerHTML = "";
