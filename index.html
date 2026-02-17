@@ -55,8 +55,8 @@
       <select id="curso"></select>
 
       <div id="divModulo" class="hidden">
-          <label for="modulo">Módulo del Programa</label>
-          <input type="text" id="modulo" placeholder="Ej: Módulo 2 o Nombre del módulo">
+          <label for="modulo">N° Módulo</label>
+          <input type="text" id="modulo" placeholder="Ej: 2">
       </div>
 
       <div id="divDias">
@@ -153,12 +153,12 @@
             });
             nota.textContent = "Máximo 2 días para descarga de material.";
         } else {
-            [3, 5, 7, 10, 15].forEach(d => {
+            [3, 5, 7, 10].forEach(d => {
                 let opt = document.createElement("option");
                 opt.value = d; opt.textContent = d + " días";
                 selectDias.appendChild(opt);
             });
-            nota.textContent = "Plazos estándar para evaluaciones.";
+            nota.textContent = "Plazos estándar para evaluaciones: 7 días.";
         }
 
         document.getElementById("contenedorCursos").classList.remove("hidden");
