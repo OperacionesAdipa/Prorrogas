@@ -80,18 +80,21 @@
         document.getElementById("contenedorCursos").classList.add("hidden");
         document.getElementById("mensaje").textContent = "";
         
-        // Mostrar/Ocultar opción de Curso/Diplomado
         if (tipo === "prorroga_evaluacion") {
             document.getElementById("extraEvaluacion").classList.remove("hidden");
         } else {
             document.getElementById("extraEvaluacion").classList.add("hidden");
         }
+        toggleModulo(); // Asegura que el módulo se oculte si cambiamos a material
     }
 
     function toggleModulo() {
+        const tipoProrroga = document.getElementById("tipoProrroga").value;
         const tipoProg = document.getElementById("tipoPrograma").value;
         const divMod = document.getElementById("divModulo");
-        if (tipoProg === "diplomado") {
+        
+        // Solo mostrar módulo si es Evaluación Y Diplomado
+        if (tipoProrroga === "prorroga_evaluacion" && tipoProg === "diplomado") {
             divMod.classList.remove("hidden");
         } else {
             divMod.classList.add("hidden");
@@ -140,7 +143,6 @@
           }
         });
 
-        // Configurar los días según el tipo
         const selectDias = document.getElementById("dias");
         const nota = document.getElementById("notaDias");
         selectDias.innerHTML = "";
@@ -162,6 +164,7 @@
         }
 
         document.getElementById("contenedorCursos").classList.remove("hidden");
+        toggleModulo(); // Re-validar visibilidad del módulo al mostrar el contenedor
         mensaje.textContent = "¡Programas encontrados!";
         mensaje.style.color = "green";
 
@@ -199,7 +202,7 @@
         if (res.ok) {
           mensaje.innerHTML = "<strong>¡Prórroga gestionada con éxito!</strong>";
           mensaje.style.color = "green";
-          setTimeout(() => { location.reload(); }, 3000); // Recarga para limpiar
+          setTimeout(() => { location.reload(); }, 3000); 
         } else { throw new Error(); }
       } catch (e) {
         mensaje.textContent = "Error al conectar con el servidor.";
