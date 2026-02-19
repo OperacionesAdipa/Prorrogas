@@ -13,11 +13,18 @@
     label { font-weight: bold; margin-top: 18px; display: block; color: #444; }
     input, select, button, textarea { width: 100%; padding: 10px; margin-top: 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; box-sizing: border-box; }
     input, select, button { height: 45px; }
-    textarea { height: 120px; resize: vertical; font-family: inherit; background: #f9f9f9; border: 1px solid #704EFD; }
+    textarea { height: 140px; resize: vertical; font-family: inherit; background: #f9f9f9; border: 1px solid #704EFD; line-height: 1.5; }
     input:focus, select:focus, textarea:focus { outline: none; border-color: #704EFD; box-shadow: 0 0 5px rgba(112, 78, 253, 0.2); }
-    button { background-color: #704EFD; color: white; border: none; cursor: pointer; margin-top: 20px; font-weight: bold; transition: background 0.3s; }
+    
+    /* Botones */
+    button { background-color: #704EFD; color: white; border: none; cursor: pointer; margin-top: 20px; font-weight: bold; transition: all 0.3s; }
     button:hover:not(:disabled) { background-color: #5a3ecf; }
     button:disabled { background-color: #ccc; cursor: not-allowed; }
+    
+    .btn-copiar { background-color: #28a745; margin-top: 10px; } /* Verde para copiar */
+    .btn-copiar:hover { background-color: #218838; }
+    .btn-copiado { background-color: #333 !important; }
+
     .mensaje { margin-top: 20px; font-size: 14px; text-align: center; font-weight: 500; }
     .info-nota { font-size: 12px; color: #666; font-style: italic; margin-top: 5px; }
     .hidden { display: none; }
@@ -76,8 +83,9 @@
     <div id="resultadoFinal" class="hidden resultado-box">
         <label style="margin-top: 0; color: #704EFD;">Respuesta para el estudiante:</label>
         <textarea id="textoRespuesta"></textarea>
-        <p class="info-nota">Copia y pega este mensaje para el alumno.</p>
-        <button onclick="location.reload()" style="background-color: #666;">Hacer otra solicitud</button>
+        
+        <button id="btnCopiar" class="btn-copiar" onclick="copiarTexto()">Copiar Mensaje</button>
+        <button onclick="location.reload()" style="background-color: #666; margin-top: 10px;">Hacer otra solicitud</button>
     </div>
   </div>
 
@@ -194,22 +202,16 @@
       const resBox = document.getElementById("resultadoFinal");
       const resText = document.getElementById("textoRespuesta");
 
-      const tipoProrroga = document.getElementById("tipoProrroga").value;
-      let tipoPrograma = document.getElementById("tipoPrograma").value;
-
-      if (tipoProrroga === "prorroga_material") { tipoPrograma = "curso"; }
-
       const payload = {
         email: document.getElementById("email").value.trim(),
-        tipo_prorroga: tipoProrroga,
-        tipo_programa: tipoPrograma,
+        tipo_prorroga: document.getElementById("tipoProrroga").value,
+        tipo_programa: document.getElementById("tipoPrograma")?.value || "curso",
         programa: document.getElementById("curso").value,
         modulo: document.getElementById("modulo").value || "Completo",
         dias_adicionales: document.getElementById("dias").value,
         fecha_solicitud: new Date().toLocaleString()
       };
 
-      // Iniciamos estado de carga y espera real
       mensaje.textContent = "Gestionando la prórroga, puede tardar unos segundos...";
       mensaje.style.color = "#704EFD";
       btnFinal.disabled = true;
@@ -221,29 +223,42 @@
           body: JSON.stringify(payload)
         });
 
-        // El código ESPERA aquí a que Make termine y responda
         const data = await res.json();
 
         if (res.ok) {
           mensaje.innerHTML = "<strong>¡Se ha gestionado con éxito!</strong>";
           mensaje.style.color = "green";
-          
-          // Mostramos la caja con la respuesta que viene de Make (paso 43)
           resBox.classList.remove("hidden");
           resText.value = data.respuesta || "Prórroga gestionada correctamente.";
-          
           btnFinal.classList.add("hidden"); 
         } else { throw new Error(); }
 
       } catch (e) {
-        console.error("Error en el flujo:", e);
-        mensaje.textContent = "Error de conexión o el servidor tardó demasiado.";
+        mensaje.textContent = "Error al conectar con el servidor.";
         mensaje.style.color = "red";
         btnFinal.disabled = false;
       }
     }
+
+    // FUNCIÓN PARA COPIAR AL PORTAPAPELES
+    function copiarTexto() {
+      const texto = document.getElementById("textoRespuesta");
+      const btnCopiar = document.getElementById("btnCopiar");
+      
+      texto.select();
+      texto.setSelectionRange(0, 99999); // Para móviles
+
+      navigator.clipboard.writeText(texto.value).then(() => {
+        const originalText = btnCopiar.innerText;
+        btnCopiar.innerText = "¡Copiado!";
+        btnCopiar.classList.add("btn-copiado");
+        
+        setTimeout(() => {
+          btnCopiar.innerText = originalText;
+          btnCopiar.classList.remove("btn-copiado");
+        }, 1500);
+      });
+    }
   </script>
-</body>
-</html>
 </body>
 </html>
