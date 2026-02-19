@@ -11,14 +11,17 @@
     img.logo { width: 160px; display: block; margin: 0 auto 25px; }
     h1 { font-size: 22px; margin-bottom: 25px; text-align: center; color: #333; }
     label { font-weight: bold; margin-top: 18px; display: block; color: #444; }
-    input, select, button { width: 100%; padding: 10px; margin-top: 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; box-sizing: border-box; height: 45px; }
-    input:focus, select:focus { outline: none; border-color: #704EFD; box-shadow: 0 0 5px rgba(112, 78, 253, 0.2); }
+    input, select, button, textarea { width: 100%; padding: 10px; margin-top: 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; box-sizing: border-box; }
+    input, select, button { height: 45px; }
+    textarea { height: 120px; resize: vertical; font-family: inherit; background: #f9f9f9; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #704EFD; box-shadow: 0 0 5px rgba(112, 78, 253, 0.2); }
     button { background-color: #704EFD; color: white; border: none; cursor: pointer; margin-top: 20px; font-weight: bold; transition: background 0.3s; }
     button:hover:not(:disabled) { background-color: #5a3ecf; }
     button:disabled { background-color: #ccc; cursor: not-allowed; }
     .mensaje { margin-top: 20px; font-size: 14px; text-align: center; font-weight: 500; }
     .info-nota { font-size: 12px; color: #666; font-style: italic; margin-top: 5px; }
     .hidden { display: none; }
+    .resultado-box { margin-top: 20px; padding: 15px; border: 1px dashed #704EFD; border-radius: 8px; background: #f4f1ff; }
   </style>
 </head>
 
@@ -35,8 +38,8 @@
     <label for="tipoProrroga">Tipo de Prórroga</label>
     <select id="tipoProrroga" onchange="limpiarPantalla()">
       <option value="">-- Selecciona una opción --</option>
-      <option value="prorroga_evaluacion">Prórroga evaluaciones</option>
-      <option value="prorroga_material">Prórroga descarga de material</option>
+      <option value="prorroga_evaluacion">Evaluaciones</option>
+      <option value="prorroga_material">Descarga de material</option>
     </select>
 
     <div id="extraEvaluacion" class="hidden">
@@ -69,6 +72,13 @@
     </div>
 
     <div class="mensaje" id="mensaje"></div>
+
+    <div id="resultadoFinal" class="hidden resultado-box">
+        <label style="margin-top: 0;">Respuesta para el estudiante:</label>
+        <textarea id="textoRespuesta"></textarea>
+        <p class="info-nota">Puedes editar este mensaje antes de copiarlo.</p>
+        <button onclick="location.reload()" style="background-color: #666;">Nueva solicitud</button>
+    </div>
   </div>
 
   <script>
@@ -78,6 +88,7 @@
     function limpiarPantalla() {
         const tipo = document.getElementById("tipoProrroga").value;
         document.getElementById("contenedorCursos").classList.add("hidden");
+        document.getElementById("resultadoFinal").classList.add("hidden");
         document.getElementById("mensaje").textContent = "";
         
         if (tipo === "prorroga_evaluacion") {
@@ -92,8 +103,6 @@
         const tipoProrroga = document.getElementById("tipoProrroga").value;
         const tipoProg = document.getElementById("tipoPrograma").value;
         const divMod = document.getElementById("divModulo");
-        
-        // El módulo solo aparece si es Evaluación Y Diplomado
         if (tipoProrroga === "prorroga_evaluacion" && tipoProg === "diplomado") {
             divMod.classList.remove("hidden");
         } else {
@@ -182,14 +191,13 @@
     async function enviarSolicitudFinal() {
       const mensaje = document.getElementById("mensaje");
       const btnFinal = document.getElementById("btnEnviarFinal");
+      const resBox = document.getElementById("resultadoFinal");
+      const resText = document.getElementById("textoRespuesta");
 
       const tipoProrroga = document.getElementById("tipoProrroga").value;
       let tipoPrograma = document.getElementById("tipoPrograma").value;
 
-      // Si es material, el tipo_programa se envía como "curso" por defecto
-      if (tipoProrroga === "prorroga_material") {
-          tipoPrograma = "curso";
-      }
+      if (tipoProrroga === "prorroga_material") { tipoPrograma = "curso"; }
 
       const payload = {
         email: document.getElementById("email").value.trim(),
@@ -201,8 +209,8 @@
         fecha_solicitud: new Date().toLocaleString()
       };
 
-      mensaje.textContent = "Procesando prórroga...";
-      mensaje.style.color = "#666";
+      mensaje.textContent = "Gestionando la prórroga, puede tardar unos segundos...";
+      mensaje.style.color = "#704EFD";
       btnFinal.disabled = true;
 
       try {
@@ -212,13 +220,20 @@
           body: JSON.stringify(payload)
         });
 
+        const data = await res.json();
+
         if (res.ok) {
-          mensaje.innerHTML = "<strong>¡Prórroga gestionada con éxito!</strong>";
+          mensaje.innerHTML = "<strong>¡Se ha gestionado con éxito!</strong>";
           mensaje.style.color = "green";
-          setTimeout(() => { location.reload(); }, 3000); 
+          
+          // Mostrar la casilla con la respuesta del Webhook
+          resBox.classList.remove("hidden");
+          resText.value = data.respuesta || "Prórroga extendida correctamente.";
+          
+          btnFinal.classList.add("hidden"); // Ocultamos el botón para evitar doble envío
         } else { throw new Error(); }
       } catch (e) {
-        mensaje.textContent = "Error al conectar con el servidor.";
+        mensaje.textContent = "Error al gestionar. Por favor intenta de nuevo.";
         mensaje.style.color = "red";
         btnFinal.disabled = false;
       }
