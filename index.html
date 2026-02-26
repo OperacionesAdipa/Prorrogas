@@ -13,15 +13,16 @@
     label { font-weight: bold; margin-top: 18px; display: block; color: #444; }
     input, select, button, textarea { width: 100%; padding: 10px; margin-top: 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; box-sizing: border-box; }
     input, select, button { height: 45px; }
+    /* Ajuste para select múltiple */
+    select[multiple] { height: auto; min-height: 100px; }
     textarea { height: 140px; resize: vertical; font-family: inherit; background: #f9f9f9; border: 1px solid #704EFD; line-height: 1.5; }
     input:focus, select:focus, textarea:focus { outline: none; border-color: #704EFD; box-shadow: 0 0 5px rgba(112, 78, 253, 0.2); }
     
-    /* Botones */
     button { background-color: #704EFD; color: white; border: none; cursor: pointer; margin-top: 20px; font-weight: bold; transition: all 0.3s; }
     button:hover:not(:disabled) { background-color: #5a3ecf; }
     button:disabled { background-color: #ccc; cursor: not-allowed; }
     
-    .btn-copiar { background-color: #28a745; margin-top: 10px; } /* Verde para copiar */
+    .btn-copiar { background-color: #28a745; margin-top: 10px; }
     .btn-copiar:hover { background-color: #218838; }
     .btn-copiado { background-color: #333 !important; }
 
@@ -29,6 +30,7 @@
     .info-nota { font-size: 12px; color: #666; font-style: italic; margin-top: 5px; }
     .hidden { display: none; }
     .resultado-box { margin-top: 20px; padding: 15px; border: 2px dashed #704EFD; border-radius: 8px; background: #f4f1ff; }
+    .btn-secundario { background-color: #f4f1ff; color: #704EFD; border: 1px solid #704EFD; margin-top: 10px; }
   </style>
 </head>
 
@@ -51,7 +53,7 @@
 
     <div id="extraEvaluacion" class="hidden">
         <label for="tipoPrograma">Tipo de Programa</label>
-        <select id="tipoPrograma" onchange="toggleModulo()">
+        <select id="tipoPrograma" onchange="toggleBotonBuscar()">
             <option value="curso">Curso</option>
             <option value="diplomado">Diplomado</option>
         </select>
@@ -64,9 +66,13 @@
       <label for="curso">Selecciona el Programa</label>
       <select id="curso"></select>
 
+      <button id="btnBuscarModulos" class="btn-secundario hidden" onclick="buscarModulosDiplomado()">Buscar módulos del programa</button>
+
       <div id="divModulo" class="hidden">
-          <label for="modulo">N° Módulo</label>
-          <input type="text" id="modulo" placeholder="Ej: 2">
+          <label id="labelModulo" for="modulo">N° Módulo</label>
+          <div id="wrapperModulo">
+              <input type="text" id="modulo" placeholder="Ej: 2">
+          </div>
       </div>
 
       <div id="divDias">
@@ -91,6 +97,7 @@
 
   <script>
     const WEBHOOK_BUSCAR = "https://hook.us2.make.com/k6n5v5l2brwcfe3ab14t3s4rwojl1akg";
+    const WEBHOOK_MODULOS = "https://hook.us2.make.com/aldugdre15ahx9lhq9kldnt50nzmqocr";
     const WEBHOOK_ENVIAR = "https://hook.us2.make.com/tkiwujry2rm5llcu4jbu7u7qgy8u23qv"; 
 
     function limpiarPantalla() {
@@ -104,16 +111,25 @@
         } else {
             document.getElementById("extraEvaluacion").classList.add("hidden");
         }
-        toggleModulo();
+        toggleBotonBuscar();
     }
 
-    function toggleModulo() {
-        const tipoProrroga = document.getElementById("tipoProrroga").value;
+    function toggleBotonBuscar() {
         const tipoProg = document.getElementById("tipoPrograma").value;
+        const tipoProrroga = document.getElementById("tipoProrroga").value;
+        const btnModulos = document.getElementById("btnBuscarModulos");
         const divMod = document.getElementById("divModulo");
+
+        // Si es diplomado, mostramos el botón de buscar módulos una vez cargue el programa
         if (tipoProrroga === "prorroga_evaluacion" && tipoProg === "diplomado") {
+            btnModulos.classList.remove("hidden");
+            divMod.classList.add("hidden"); // Se oculta hasta que se pulse el botón
+        } else if (tipoProrroga === "prorroga_evaluacion") {
+            btnModulos.classList.add("hidden");
             divMod.classList.remove("hidden");
+            document.getElementById("wrapperModulo").innerHTML = '<input type="text" id="modulo" placeholder="Ej: 2">';
         } else {
+            btnModulos.classList.add("hidden");
             divMod.classList.add("hidden");
         }
     }
@@ -186,7 +202,7 @@
         }
 
         document.getElementById("contenedorCursos").classList.remove("hidden");
-        toggleModulo();
+        toggleBotonBuscar();
         mensaje.textContent = "¡Programas encontrados!";
         mensaje.style.color = "green";
 
@@ -196,23 +212,82 @@
       } finally { boton.disabled = false; }
     }
 
+    async function buscarModulosDiplomado() {
+        const email = document.getElementById("email").value.trim();
+        const programa = document.getElementById("curso").value;
+        const mensaje = document.getElementById("mensaje");
+        const btnModulos = document.getElementById("btnBuscarModulos");
+
+        mensaje.textContent = "Buscando módulos pendientes...";
+        mensaje.style.color = "#666";
+        btnModulos.disabled = true;
+
+        try {
+            const res = await fetch(WEBHOOK_MODULOS, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: email, programa: programa })
+            });
+
+            const modulos = await res.json();
+            
+            if (modulos && modulos.length > 0) {
+                const divMod = document.getElementById("divModulo");
+                const wrapper = document.getElementById("wrapperModulo");
+                document.getElementById("labelModulo").textContent = "Selecciona el/los módulos (Mantén Ctrl para varios)";
+                
+                let selectHtml = '<select id="modulo" multiple>';
+                modulos.forEach(m => {
+                    selectHtml += `<option value="${m.nombre || m}">${m.nombre || m}</option>`;
+                });
+                selectHtml += '</select>';
+                
+                wrapper.innerHTML = selectHtml;
+                divMod.classList.remove("hidden");
+                mensaje.textContent = "Módulos cargados.";
+                mensaje.style.color = "green";
+            } else {
+                throw new Error("No hay módulos pendientes");
+            }
+        } catch (e) {
+            mensaje.textContent = "No se encontraron módulos pendientes para este diplomado.";
+            mensaje.style.color = "red";
+        } finally { btnModulos.disabled = false; }
+    }
+
     async function enviarSolicitudFinal() {
       const mensaje = document.getElementById("mensaje");
       const btnFinal = document.getElementById("btnEnviarFinal");
       const resBox = document.getElementById("resultadoFinal");
       const resText = document.getElementById("textoRespuesta");
+      
+      // Manejo de selección múltiple o simple
+      const moduloElement = document.getElementById("modulo");
+      let modulosSeleccionados = "";
+      
+      if (moduloElement.tagName === "SELECT" && moduloElement.multiple) {
+          modulosSeleccionados = Array.from(moduloElement.selectedOptions).map(opt => opt.value).join(", ");
+      } else {
+          modulosSeleccionados = moduloElement.value || "Completo";
+      }
 
       const payload = {
         email: document.getElementById("email").value.trim(),
         tipo_prorroga: document.getElementById("tipoProrroga").value,
         tipo_programa: document.getElementById("tipoPrograma")?.value || "curso",
         programa: document.getElementById("curso").value,
-        modulo: document.getElementById("modulo").value || "Completo",
+        modulo: modulosSeleccionados,
         dias_adicionales: document.getElementById("dias").value,
         fecha_solicitud: new Date().toLocaleString()
       };
 
-      mensaje.textContent = "Gestionando la prórroga, puede tardar unos segundos...";
+      if (!modulosSeleccionados || modulosSeleccionados === "") {
+          mensaje.textContent = "Por favor, selecciona al menos un módulo.";
+          mensaje.style.color = "red";
+          return;
+      }
+
+      mensaje.textContent = "Gestionando la prórroga...";
       mensaje.style.color = "#704EFD";
       btnFinal.disabled = true;
 
@@ -240,19 +315,14 @@
       }
     }
 
-    // FUNCIÓN PARA COPIAR AL PORTAPAPELES
     function copiarTexto() {
       const texto = document.getElementById("textoRespuesta");
       const btnCopiar = document.getElementById("btnCopiar");
-      
       texto.select();
-      texto.setSelectionRange(0, 99999); // Para móviles
-
       navigator.clipboard.writeText(texto.value).then(() => {
         const originalText = btnCopiar.innerText;
         btnCopiar.innerText = "¡Copiado!";
         btnCopiar.classList.add("btn-copiado");
-        
         setTimeout(() => {
           btnCopiar.innerText = originalText;
           btnCopiar.classList.remove("btn-copiado");
