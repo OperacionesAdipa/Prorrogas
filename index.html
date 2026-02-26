@@ -13,7 +13,7 @@
     label { font-weight: bold; margin-top: 18px; display: block; color: #444; }
     input, select, button, textarea { width: 100%; padding: 10px; margin-top: 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; box-sizing: border-box; }
     input, select, button { height: 45px; }
-    select[multiple] { height: auto; min-height: 120px; border: 2px solid #704EFD; }
+    select[multiple] { height: auto; min-height: 120px; border: 2px solid #704EFD; margin-bottom: 10px; }
     textarea { height: 140px; resize: vertical; font-family: inherit; background: #f9f9f9; border: 1px solid #704EFD; line-height: 1.5; }
     input:focus, select:focus, textarea:focus { outline: none; border-color: #704EFD; box-shadow: 0 0 5px rgba(112, 78, 253, 0.2); }
     
@@ -63,14 +63,14 @@
     <div id="contenedorCursos" class="hidden" style="margin-top: 30px; border-top: 2px solid #eee; padding-top: 10px;">
       
       <label for="curso">Selecciona el Programa</label>
-      <select id="curso"></select>
+      <select id="curso" onchange="toggleBotonBuscar()"></select>
 
       <button id="btnBuscarModulos" class="btn-secundario hidden" onclick="buscarModulosDiplomado()">Buscar módulos del programa</button>
 
       <div id="divModulo" class="hidden">
-          <label id="labelModulo" for="modulo">Módulos pendientes</label>
+          <label id="labelModulo" for="modulo_select">Módulos/Evaluaciones pendientes</label>
           <div id="wrapperModulo"></div>
-          <p class="info-nota">Mantén presionado Ctrl (Windows) o Command (Mac) para seleccionar varios.</p>
+          <p class="info-nota">Mantén presionado Ctrl (Win) o Cmd (Mac) para elegir varios.</p>
       </div>
 
       <div id="divDias">
@@ -119,17 +119,17 @@
         const divMod = document.getElementById("divModulo");
         const btnFinal = document.getElementById("btnEnviarFinal");
 
+        // Reset inicial
         btnModulos.classList.add("hidden");
         divMod.classList.add("hidden");
-        btnFinal.classList.add("hidden"); // Aseguramos que el botón final se oculte al cambiar opciones
+        btnFinal.classList.add("hidden");
 
         if (tipoProrroga === "prorroga_evaluacion") {
             if (tipoProg === "diplomado") {
                 btnModulos.classList.remove("hidden");
-                // El botón final permanece oculto hasta que se carguen módulos
+                // btnFinal se queda oculto hasta que carguen módulos
             } else {
-                // Si es curso, el botón final sí se muestra porque no requiere buscar módulos extra
-                btnFinal.classList.remove("hidden");
+                btnFinal.classList.remove("hidden"); // Para curso se muestra directo
             }
         } else if (tipoProrroga === "prorroga_material") {
             btnFinal.classList.remove("hidden");
@@ -144,12 +144,12 @@
       const boton = document.getElementById("btnBuscar");
 
       if (!email || !tipoProrroga) {
-        mensaje.textContent = "Por favor, completa el correo y el tipo de prórroga.";
+        mensaje.textContent = "Completa el correo y tipo de prórroga.";
         mensaje.style.color = "red";
         return;
       }
 
-      mensaje.textContent = "Buscando inscripciones...";
+      mensaje.textContent = "Buscando programas...";
       mensaje.style.color = "#666";
       boton.disabled = true;
 
@@ -177,8 +177,7 @@
         listaCursos.forEach(c => {
           if(c) {
             let opt = document.createElement("option");
-            opt.value = c; 
-            opt.textContent = c;
+            opt.value = c; opt.textContent = c;
             selectCursos.appendChild(opt);
           }
         });
@@ -193,23 +192,23 @@
                 opt.value = d; opt.textContent = d + (d === 1 ? " día" : " días");
                 selectDias.appendChild(opt);
             });
-            nota.textContent = "Máximo 2 días para descarga de material.";
+            nota.textContent = "Máximo 2 días para descarga.";
         } else {
             [3, 5, 7, 10].forEach(d => {
                 let opt = document.createElement("option");
                 opt.value = d; opt.textContent = d + " días";
                 selectDias.appendChild(opt);
             });
-            nota.textContent = "Plazos estándar para evaluaciones: 7 días.";
+            nota.textContent = "Plazo estándar: 7 días.";
         }
 
         document.getElementById("contenedorCursos").classList.remove("hidden");
         toggleBotonBuscar();
-        mensaje.textContent = "¡Programas encontrados!";
+        mensaje.textContent = "Programas encontrados.";
         mensaje.style.color = "green";
 
       } catch (e) {
-        mensaje.textContent = "No se encontraron programas activos para este correo.";
+        mensaje.textContent = "No se encontraron programas activos.";
         mensaje.style.color = "red";
       } finally { boton.disabled = false; }
     }
@@ -221,41 +220,44 @@
         const btnModulos = document.getElementById("btnBuscarModulos");
         const btnFinal = document.getElementById("btnEnviarFinal");
 
-        mensaje.textContent = "Buscando módulos pendientes...";
+        mensaje.textContent = "Consultando módulos en Moodle...";
         mensaje.style.color = "#666";
         btnModulos.disabled = true;
 
         try {
-            // USANDO WEBHOOK_MODULOS CORRECTO
+            // PETICIÓN AL WEBHOOK DE MÓDULOS (aldugdre...)
             const res = await fetch(WEBHOOK_MODULOS, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email: email, nombre_programa: programa })
             });
 
+            if (!res.ok) throw new Error();
+
             const modulos = await res.json();
             
-            if (modulos && modulos.length > 0) {
+            if (Array.isArray(modulos) && modulos.length > 0) {
                 const divMod = document.getElementById("divModulo");
                 const wrapper = document.getElementById("wrapperModulo");
                 
                 let selectHtml = '<select id="modulo_select" multiple>';
                 modulos.forEach(m => {
-                    let val = (typeof m === 'object') ? m.nombre : m;
+                    let val = (typeof m === 'object' && m !== null) ? (m.nombre || m.id || JSON.stringify(m)) : m;
                     selectHtml += `<option value="${val}">${val}</option>`;
                 });
                 selectHtml += '</select>';
                 
                 wrapper.innerHTML = selectHtml;
                 divMod.classList.remove("hidden");
-                btnFinal.classList.remove("hidden"); // RECIÉN AQUÍ SE HABILITA EL BOTÓN FINAL
-                mensaje.textContent = "Módulos cargados. Selecciona y gestiona.";
+                btnFinal.classList.remove("hidden"); // Se muestra el botón de gestión final
+                mensaje.textContent = "Módulos cargados. Selecciona los pendientes.";
                 mensaje.style.color = "green";
             } else {
-                throw new Error();
+                mensaje.textContent = "No se hallaron evaluaciones pendientes.";
+                mensaje.style.color = "orange";
             }
         } catch (e) {
-            mensaje.textContent = "No se encontraron módulos pendientes.";
+            mensaje.textContent = "Error al conectar con el servidor de módulos.";
             mensaje.style.color = "red";
         } finally { btnModulos.disabled = false; }
     }
@@ -276,7 +278,7 @@
           if (!selectM) return;
           const seleccionados = Array.from(selectM.selectedOptions).map(opt => opt.value);
           if (seleccionados.length === 0) {
-              mensaje.textContent = "Por favor, selecciona al menos un módulo.";
+              mensaje.textContent = "Selecciona al menos un módulo.";
               mensaje.style.color = "red";
               return;
           }
@@ -293,7 +295,7 @@
         fecha_solicitud: new Date().toLocaleString()
       };
 
-      mensaje.textContent = "Gestionando la prórroga...";
+      mensaje.textContent = "Procesando solicitud...";
       mensaje.style.color = "#704EFD";
       btnFinal.disabled = true;
 
@@ -307,15 +309,15 @@
         const data = await res.json();
 
         if (res.ok) {
-          mensaje.innerHTML = "<strong>¡Se ha gestionado con éxito!</strong>";
+          mensaje.innerHTML = "<strong>¡Gestión completada!</strong>";
           mensaje.style.color = "green";
           resBox.classList.remove("hidden");
-          resText.value = data.respuesta || "Prórroga gestionada correctamente.";
+          resText.value = data.respuesta || "Prórroga asignada correctamente.";
           btnFinal.classList.add("hidden"); 
         } else { throw new Error(); }
 
       } catch (e) {
-        mensaje.textContent = "Error al conectar con el servidor.";
+        mensaje.textContent = "Error en el envío final.";
         mensaje.style.color = "red";
         btnFinal.disabled = false;
       }
