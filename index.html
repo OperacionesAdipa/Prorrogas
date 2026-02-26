@@ -13,8 +13,7 @@
     label { font-weight: bold; margin-top: 18px; display: block; color: #444; }
     input, select, button, textarea { width: 100%; padding: 10px; margin-top: 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; box-sizing: border-box; }
     input, select, button { height: 45px; }
-    /* Ajuste para select múltiple */
-    select[multiple] { height: auto; min-height: 100px; }
+    select[multiple] { height: auto; min-height: 120px; border: 1px solid #704EFD; }
     textarea { height: 140px; resize: vertical; font-family: inherit; background: #f9f9f9; border: 1px solid #704EFD; line-height: 1.5; }
     input:focus, select:focus, textarea:focus { outline: none; border-color: #704EFD; box-shadow: 0 0 5px rgba(112, 78, 253, 0.2); }
     
@@ -30,7 +29,7 @@
     .info-nota { font-size: 12px; color: #666; font-style: italic; margin-top: 5px; }
     .hidden { display: none; }
     .resultado-box { margin-top: 20px; padding: 15px; border: 2px dashed #704EFD; border-radius: 8px; background: #f4f1ff; }
-    .btn-secundario { background-color: #f4f1ff; color: #704EFD; border: 1px solid #704EFD; margin-top: 10px; }
+    .btn-secundario { background-color: #f4f1ff; color: #704EFD; border: 1px solid #704EFD; margin-top: 15px; }
   </style>
 </head>
 
@@ -69,10 +68,10 @@
       <button id="btnBuscarModulos" class="btn-secundario hidden" onclick="buscarModulosDiplomado()">Buscar módulos del programa</button>
 
       <div id="divModulo" class="hidden">
-          <label id="labelModulo" for="modulo">N° Módulo</label>
+          <label id="labelModulo" for="modulo">Módulos pendientes</label>
           <div id="wrapperModulo">
-              <input type="text" id="modulo" placeholder="Ej: 2">
-          </div>
+              </div>
+          <p class="info-nota">Mantén presionado Ctrl (Windows) o Command (Mac) para seleccionar varios.</p>
       </div>
 
       <div id="divDias">
@@ -105,6 +104,8 @@
         document.getElementById("contenedorCursos").classList.add("hidden");
         document.getElementById("resultadoFinal").classList.add("hidden");
         document.getElementById("mensaje").textContent = "";
+        document.getElementById("btnEnviarFinal").classList.remove("hidden");
+        document.getElementById("btnEnviarFinal").disabled = false;
         
         if (tipo === "prorroga_evaluacion") {
             document.getElementById("extraEvaluacion").classList.remove("hidden");
@@ -120,18 +121,15 @@
         const btnModulos = document.getElementById("btnBuscarModulos");
         const divMod = document.getElementById("divModulo");
 
-        // Si es diplomado, mostramos el botón de buscar módulos una vez cargue el programa
+        // Reset inicial: ocultamos ambos
+        btnModulos.classList.add("hidden");
+        divMod.classList.add("hidden");
+
+        // Lógica: Solo diplomado muestra botón de búsqueda de módulos
         if (tipoProrroga === "prorroga_evaluacion" && tipoProg === "diplomado") {
             btnModulos.classList.remove("hidden");
-            divMod.classList.add("hidden"); // Se oculta hasta que se pulse el botón
-        } else if (tipoProrroga === "prorroga_evaluacion") {
-            btnModulos.classList.add("hidden");
-            divMod.classList.remove("hidden");
-            document.getElementById("wrapperModulo").innerHTML = '<input type="text" id="modulo" placeholder="Ej: 2">';
-        } else {
-            btnModulos.classList.add("hidden");
-            divMod.classList.add("hidden");
         }
+        // Para Curso, divMod se mantiene oculto (comportamiento original)
     }
 
     async function buscarProgramas() {
@@ -226,7 +224,7 @@
             const res = await fetch(WEBHOOK_MODULOS, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email: email, programa: programa })
+                body: JSON.stringify({ email: email, nombre_programa: programa })
             });
 
             const modulos = await res.json();
@@ -234,23 +232,24 @@
             if (modulos && modulos.length > 0) {
                 const divMod = document.getElementById("divModulo");
                 const wrapper = document.getElementById("wrapperModulo");
-                document.getElementById("labelModulo").textContent = "Selecciona el/los módulos (Mantén Ctrl para varios)";
                 
-                let selectHtml = '<select id="modulo" multiple>';
+                let selectHtml = '<select id="modulo_select" multiple>';
                 modulos.forEach(m => {
-                    selectHtml += `<option value="${m.nombre || m}">${m.nombre || m}</option>`;
+                    // Soporta tanto array de strings como array de objetos {nombre: "..."}
+                    let val = (typeof m === 'object') ? m.nombre : m;
+                    selectHtml += `<option value="${val}">${val}</option>`;
                 });
                 selectHtml += '</select>';
                 
                 wrapper.innerHTML = selectHtml;
                 divMod.classList.remove("hidden");
-                mensaje.textContent = "Módulos cargados.";
+                mensaje.textContent = "Módulos cargados exitosamente.";
                 mensaje.style.color = "green";
             } else {
-                throw new Error("No hay módulos pendientes");
+                throw new Error();
             }
         } catch (e) {
-            mensaje.textContent = "No se encontraron módulos pendientes para este diplomado.";
+            mensaje.textContent = "No se encontraron módulos pendientes.";
             mensaje.style.color = "red";
         } finally { btnModulos.disabled = false; }
     }
@@ -261,31 +260,37 @@
       const resBox = document.getElementById("resultadoFinal");
       const resText = document.getElementById("textoRespuesta");
       
-      // Manejo de selección múltiple o simple
-      const moduloElement = document.getElementById("modulo");
-      let modulosSeleccionados = "";
+      const tipoProg = document.getElementById("tipoPrograma").value;
+      const tipoProrroga = document.getElementById("tipoProrroga").value;
       
-      if (moduloElement.tagName === "SELECT" && moduloElement.multiple) {
-          modulosSeleccionados = Array.from(moduloElement.selectedOptions).map(opt => opt.value).join(", ");
-      } else {
-          modulosSeleccionados = moduloElement.value || "Completo";
+      let modulosSeleccionados = "Completo";
+
+      // Lógica para capturar módulos si es Diplomado
+      if (tipoProrroga === "prorroga_evaluacion" && tipoProg === "diplomado") {
+          const selectM = document.getElementById("modulo_select");
+          if (!selectM) {
+              mensaje.textContent = "Primero debes buscar y seleccionar los módulos.";
+              mensaje.style.color = "red";
+              return;
+          }
+          const seleccionados = Array.from(selectM.selectedOptions).map(opt => opt.value);
+          if (seleccionados.length === 0) {
+              mensaje.textContent = "Selecciona al menos un módulo.";
+              mensaje.style.color = "red";
+              return;
+          }
+          modulosSeleccionados = seleccionados.join(", ");
       }
 
       const payload = {
         email: document.getElementById("email").value.trim(),
-        tipo_prorroga: document.getElementById("tipoProrroga").value,
-        tipo_programa: document.getElementById("tipoPrograma")?.value || "curso",
+        tipo_prorroga: tipoProrroga,
+        tipo_programa: tipoProrroga === "prorroga_material" ? "curso" : tipoProg,
         programa: document.getElementById("curso").value,
         modulo: modulosSeleccionados,
         dias_adicionales: document.getElementById("dias").value,
         fecha_solicitud: new Date().toLocaleString()
       };
-
-      if (!modulosSeleccionados || modulosSeleccionados === "") {
-          mensaje.textContent = "Por favor, selecciona al menos un módulo.";
-          mensaje.style.color = "red";
-          return;
-      }
 
       mensaje.textContent = "Gestionando la prórroga...";
       mensaje.style.color = "#704EFD";
