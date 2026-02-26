@@ -13,7 +13,7 @@
     label { font-weight: bold; margin-top: 18px; display: block; color: #444; }
     input, select, button, textarea { width: 100%; padding: 10px; margin-top: 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; box-sizing: border-box; }
     input, select, button { height: 45px; }
-    select[multiple] { height: auto; min-height: 120px; border: 1px solid #704EFD; }
+    select[multiple] { height: auto; min-height: 120px; border: 2px solid #704EFD; }
     textarea { height: 140px; resize: vertical; font-family: inherit; background: #f9f9f9; border: 1px solid #704EFD; line-height: 1.5; }
     input:focus, select:focus, textarea:focus { outline: none; border-color: #704EFD; box-shadow: 0 0 5px rgba(112, 78, 253, 0.2); }
     
@@ -69,8 +69,7 @@
 
       <div id="divModulo" class="hidden">
           <label id="labelModulo" for="modulo">Módulos pendientes</label>
-          <div id="wrapperModulo">
-              </div>
+          <div id="wrapperModulo"></div>
           <p class="info-nota">Mantén presionado Ctrl (Windows) o Command (Mac) para seleccionar varios.</p>
       </div>
 
@@ -80,7 +79,7 @@
           <p id="notaDias" class="info-nota"></p>
       </div>
 
-      <button id="btnEnviarFinal" onclick="enviarSolicitudFinal()">Gestionar Prórroga</button>
+      <button id="btnEnviarFinal" class="hidden" onclick="enviarSolicitudFinal()">Gestionar Prórroga</button>
     </div>
 
     <div class="mensaje" id="mensaje"></div>
@@ -104,8 +103,6 @@
         document.getElementById("contenedorCursos").classList.add("hidden");
         document.getElementById("resultadoFinal").classList.add("hidden");
         document.getElementById("mensaje").textContent = "";
-        document.getElementById("btnEnviarFinal").classList.remove("hidden");
-        document.getElementById("btnEnviarFinal").disabled = false;
         
         if (tipo === "prorroga_evaluacion") {
             document.getElementById("extraEvaluacion").classList.remove("hidden");
@@ -120,16 +117,23 @@
         const tipoProrroga = document.getElementById("tipoProrroga").value;
         const btnModulos = document.getElementById("btnBuscarModulos");
         const divMod = document.getElementById("divModulo");
+        const btnFinal = document.getElementById("btnEnviarFinal");
 
-        // Reset inicial: ocultamos ambos
         btnModulos.classList.add("hidden");
         divMod.classList.add("hidden");
+        btnFinal.classList.add("hidden"); // Aseguramos que el botón final se oculte al cambiar opciones
 
-        // Lógica: Solo diplomado muestra botón de búsqueda de módulos
-        if (tipoProrroga === "prorroga_evaluacion" && tipoProg === "diplomado") {
-            btnModulos.classList.remove("hidden");
+        if (tipoProrroga === "prorroga_evaluacion") {
+            if (tipoProg === "diplomado") {
+                btnModulos.classList.remove("hidden");
+                // El botón final permanece oculto hasta que se carguen módulos
+            } else {
+                // Si es curso, el botón final sí se muestra porque no requiere buscar módulos extra
+                btnFinal.classList.remove("hidden");
+            }
+        } else if (tipoProrroga === "prorroga_material") {
+            btnFinal.classList.remove("hidden");
         }
-        // Para Curso, divMod se mantiene oculto (comportamiento original)
     }
 
     async function buscarProgramas() {
@@ -215,12 +219,14 @@
         const programa = document.getElementById("curso").value;
         const mensaje = document.getElementById("mensaje");
         const btnModulos = document.getElementById("btnBuscarModulos");
+        const btnFinal = document.getElementById("btnEnviarFinal");
 
         mensaje.textContent = "Buscando módulos pendientes...";
         mensaje.style.color = "#666";
         btnModulos.disabled = true;
 
         try {
+            // USANDO WEBHOOK_MODULOS CORRECTO
             const res = await fetch(WEBHOOK_MODULOS, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -235,7 +241,6 @@
                 
                 let selectHtml = '<select id="modulo_select" multiple>';
                 modulos.forEach(m => {
-                    // Soporta tanto array de strings como array de objetos {nombre: "..."}
                     let val = (typeof m === 'object') ? m.nombre : m;
                     selectHtml += `<option value="${val}">${val}</option>`;
                 });
@@ -243,7 +248,8 @@
                 
                 wrapper.innerHTML = selectHtml;
                 divMod.classList.remove("hidden");
-                mensaje.textContent = "Módulos cargados exitosamente.";
+                btnFinal.classList.remove("hidden"); // RECIÉN AQUÍ SE HABILITA EL BOTÓN FINAL
+                mensaje.textContent = "Módulos cargados. Selecciona y gestiona.";
                 mensaje.style.color = "green";
             } else {
                 throw new Error();
@@ -265,17 +271,12 @@
       
       let modulosSeleccionados = "Completo";
 
-      // Lógica para capturar módulos si es Diplomado
       if (tipoProrroga === "prorroga_evaluacion" && tipoProg === "diplomado") {
           const selectM = document.getElementById("modulo_select");
-          if (!selectM) {
-              mensaje.textContent = "Primero debes buscar y seleccionar los módulos.";
-              mensaje.style.color = "red";
-              return;
-          }
+          if (!selectM) return;
           const seleccionados = Array.from(selectM.selectedOptions).map(opt => opt.value);
           if (seleccionados.length === 0) {
-              mensaje.textContent = "Selecciona al menos un módulo.";
+              mensaje.textContent = "Por favor, selecciona al menos un módulo.";
               mensaje.style.color = "red";
               return;
           }
